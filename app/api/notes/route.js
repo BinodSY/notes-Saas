@@ -87,3 +87,5 @@ export const POST = requireAuth(async (req) => {
 
   return new Response(JSON.stringify(note), { status: 201 });
 });
+
+

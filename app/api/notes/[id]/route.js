@@ -30,8 +30,8 @@ export const PUT = requireAuth(async (req) => {
   return new Response(JSON.stringify(updatedNote), { status: 200 });
 });
 
-export const DELETE = requireAuth(async (req) => {
-  const { id } = req.params;
+export const DELETE = requireAuth(async (req, { params }) => {
+  const { id } = params;
 
   const note = await prisma.note.findUnique({ where: { id: parseInt(id) } });
   if (!note || note.tenantId !== req.user.tenantId) {
