@@ -37,6 +37,11 @@ export default function NotesPage() {
   const [error, setError] = useState("");
   const [tenantPlan, setTenantPlan] = useState<"free" | "pro">("free");
 
+  // State for admin invite user form
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [inviteRole, setInviteRole] = useState<"Member" | "Admin">("Member");
+
   const token = getToken();
 
   useEffect(() => {
@@ -154,6 +159,87 @@ async function upgradeTenant() {
             Logout
           </button>
         </div>
+
+        {/* Admin Invite User UI */}
+        {token && (() => {
+          // Decode token to get user role
+          try {
+            const decoded = jwtDecode<MyTokenPayload>(token);
+            return decoded.role === "Admin";
+          } catch {
+            return false;
+          }
+        })() && (
+          <div className="mb-6 p-4 border rounded bg-gray-50 shadow-sm">
+            <h3 className="font-bold text-gray-900 mb-2">Invite User</h3>
+            <form
+              onSubmit={async (e) => {
+          e.preventDefault();
+          setError("");
+          try {
+            const decoded = jwtDecode<MyTokenPayload>(token!);
+            const slug = decoded.tenantSlug;
+            const res = await fetch(`/api/tenants/${slug}/invite`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                email: inviteEmail,
+                password: invitePassword,
+                role: inviteRole,
+              }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              alert("User invited!");
+              setInviteEmail("");
+              setInvitePassword("");
+              setInviteRole("Member");
+            } else {
+              setError("error" in data ? data.error : "Failed to invite user");
+            }
+          } catch {
+            setError("Failed to invite user");
+          }
+              }}
+              className="space-y-2"
+            >
+              <input
+          type="email"
+          placeholder="Email"
+          value={inviteEmail}
+          onChange={(e) => setInviteEmail(e.target.value)}
+          className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-sm"
+          required
+              />
+              <select
+          value={inviteRole}
+          onChange={(e) => setInviteRole(e.target.value as "Member" | "Admin")}
+          className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-sm"
+              >
+          <option value="Member">Member</option>
+          <option value="Admin">Admin</option>
+              </select>
+              <input
+          type="password"
+          placeholder="Password"
+          value={invitePassword}
+          onChange={(e) => setInvitePassword(e.target.value)}
+          className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 shadow-sm"
+          required
+              />
+              <button
+          type="submit"
+          className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
+              >
+          Invite
+              </button>
+            </form>
+          </div>
+        )}
+
 
         <form onSubmit={createNote} className="mb-4 space-y-2">
           <input

@@ -11,6 +11,57 @@ export const GET = requireAuth(async (req) => {
   return new Response(JSON.stringify(notes), { status: 200 });
 });
 
+// Get a specific note by ID
+export const GET_BY_ID = requireAuth(async (req) => {
+  const { id } = req.params || {};
+
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'Note ID is required.' }), { status: 400 });
+  }
+
+  const note = await prisma.note.findFirst({
+    where: {
+      id: Number(id),
+      tenantId: req.user.tenantId,
+    },
+    include: { tenant: true },
+  });
+
+  if (!note) {
+    return new Response(JSON.stringify({ error: 'Note not found or access denied.' }), { status: 404 });
+  }
+
+  return new Response(JSON.stringify(note), { status: 200 });
+});
+
+
+
+// Update a note
+export const PUT = requireAuth(async (req) => {
+  const { id, title, content } = await req.json();
+
+  // Find the note and ensure it belongs to the user's tenant
+  const note = await prisma.note.findFirst({
+    where: {
+      id: Number(id),
+      tenantId: req.user.tenantId,
+    },
+  });
+
+  if (!note || note.tenantId !== req.user.tenantId) {
+    return new Response(JSON.stringify({ error: 'Note not found or access denied.' }), { status: 404 });
+  }
+
+  const updatedNote = await prisma.note.update({
+    where: { id },
+    data: { title, content },
+  });
+
+  return new Response(JSON.stringify(updatedNote), { status: 200 });
+});
+
+
+
 export const POST = requireAuth(async (req) => {
   const { title, content } = await req.json();
 
