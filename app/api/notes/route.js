@@ -5,6 +5,7 @@ export const GET = requireAuth(async (req) => {
   const notes = await prisma.note.findMany({
     where: { tenantId: req.user.tenantId },
     orderBy: { createdAt: 'desc' },
+    include: { tenant: true }, // Include tenant details
   });
 
   return new Response(JSON.stringify(notes), { status: 200 });

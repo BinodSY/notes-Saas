@@ -1,9 +1,9 @@
 "use client";
-
+// import { verifyToken } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getToken, clearToken } from "@/lib/auth";
-
+import {jwtDecode} from "jwt-decode";
 interface Tenant {
   id: number;
   slug: string;
@@ -19,6 +19,15 @@ interface Note {
 
 type NotesResponse = Note[] | { error: string };
 type NoteResponse = Note | { error: string };
+
+interface MyTokenPayload {
+  userId: number;
+  tenantId: number;
+  role: string;
+  tenantSlug: string;
+  iat: number;
+  exp: number;
+}
 
 export default function NotesPage() {
   const router = useRouter();
@@ -94,28 +103,39 @@ export default function NotesPage() {
     }
   }
 
-  async function upgradeTenant() {
-    const slug = notes[0]?.tenant?.slug;
-    if (!slug) return;
-
-    try {
-      const res = await fetch(`/api/tenants/${slug}/upgrade`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("Tenant upgraded to Pro!");
-        setTenantPlan("pro");
-      } else {
-        setError("error" in data ? data.error : "Upgrade failed");
-      }
-    } catch {
-      setError("Upgrade failed");
-    }
+ 
+async function upgradeTenant() {
+  if (!token) {
+  setError("No token found");
+  return;
+}
+  const decoded = jwtDecode<MyTokenPayload>(token);
+  console.log("Decoded token:", decoded);
+  const slug = decoded.tenantSlug;
+  if (!slug) {
+    setError("Tenant slug missing from token");
+    return;
   }
+
+  try {
+    const res = await fetch(`/api/tenants/${slug}/upgrade`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("Tenant upgraded to Pro!");
+      setTenantPlan("pro");
+      await fetchNotes();
+    } else {
+      setError("error" in data ? data.error : "Upgrade failed");
+    }
+  } catch {
+    setError("Upgrade failed");
+  }
+}
 
   function handleLogout() {
     clearToken();
